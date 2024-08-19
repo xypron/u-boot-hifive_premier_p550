@@ -629,49 +629,68 @@ static int usb_hub_configure(struct usb_device *dev)
 
 	hub = usb_get_hub_device(dev);
 	if (hub == NULL)
+	{
+		printf("failed to get hub device\n\r");
 		return -ENOMEM;
+	}
 	hub->pusb_dev = dev;
 
 	/* Get the the hub descriptor */
 	ret = usb_get_hub_descriptor(dev, buffer, 4);
-	if (ret < 0) {
-		debug("usb_hub_configure: failed to get hub " \
-		      "descriptor, giving up %lX\n", dev->status);
+	if (ret < 0)
+	{
+		printf("usb_hub_configure: failed to get hub "
+			   "descriptor, giving up %lX\n",
+			   dev->status);
 		return ret;
 	}
 	descriptor = (struct usb_hub_descriptor *)buffer;
 
 	length = min_t(int, descriptor->bLength,
 		       sizeof(struct usb_hub_descriptor));
+	while (1)
+	{
 
-	ret = usb_get_hub_descriptor(dev, buffer, length);
-	if (ret < 0) {
-		debug("usb_hub_configure: failed to get hub " \
-		      "descriptor 2nd giving up %lX\n", dev->status);
-		return ret;
+		ret = usb_get_hub_descriptor(dev, buffer, length);
+			if (ret < 0)
+			{
+				printf("usb_hub_configure: failed to get hub "
+					"descriptor 2nd giving up %lX\n",
+					dev->status);
+			return ret;
+		}
+		memcpy((unsigned char *)&hub->desc, buffer, length);
+		/* adjust 16bit values */
+		put_unaligned(le16_to_cpu(get_unaligned(
+				&descriptor->wHubCharacteristics)),
+				&hub->desc.wHubCharacteristics);
+		/* set the bitmap */
+		bitmap = (unsigned char *)&hub->desc.u.hs.DeviceRemovable[0];
+		/* devices not removable by default */
+		memset(bitmap, 0xff, (USB_MAXCHILDREN+1+7)/8);
+		bitmap = (unsigned char *)&hub->desc.u.hs.PortPowerCtrlMask[0];
+		memset(bitmap, 0xff, (USB_MAXCHILDREN+1+7)/8); /* PowerMask = 1B */
+
+		for (i = 0; i < ((hub->desc.bNbrPorts + 1 + 7)/8); i++)
+			hub->desc.u.hs.DeviceRemovable[i] =
+				descriptor->u.hs.DeviceRemovable[i];
+
+		for (i = 0; i < ((hub->desc.bNbrPorts + 1 + 7)/8); i++)
+			hub->desc.u.hs.PortPowerCtrlMask[i] =
+				descriptor->u.hs.PortPowerCtrlMask[i];
+
+		dev->maxchild = descriptor->bNbrPorts;
+		printf("%d ports detected\n\r", dev->maxchild);
+		printf("descriptor bLength:%d,bDescriptorType:%d,bNbrPorts:%d,"
+		"wHubCharacteristics:%d,bPwrOn2PwrGood:%d,bHubContrCurrent\n\r",
+			   descriptor->bLength, descriptor->bDescriptorType,
+			   descriptor->bNbrPorts, descriptor->wHubCharacteristics,
+			   descriptor->bPwrOn2PwrGood, descriptor->bHubContrCurrent);
+		if (0 != dev->maxchild)
+		{
+			break;
+		}
 	}
-	memcpy((unsigned char *)&hub->desc, buffer, length);
-	/* adjust 16bit values */
-	put_unaligned(le16_to_cpu(get_unaligned(
-			&descriptor->wHubCharacteristics)),
-			&hub->desc.wHubCharacteristics);
-	/* set the bitmap */
-	bitmap = (unsigned char *)&hub->desc.u.hs.DeviceRemovable[0];
-	/* devices not removable by default */
-	memset(bitmap, 0xff, (USB_MAXCHILDREN+1+7)/8);
-	bitmap = (unsigned char *)&hub->desc.u.hs.PortPowerCtrlMask[0];
-	memset(bitmap, 0xff, (USB_MAXCHILDREN+1+7)/8); /* PowerMask = 1B */
-
-	for (i = 0; i < ((hub->desc.bNbrPorts + 1 + 7)/8); i++)
-		hub->desc.u.hs.DeviceRemovable[i] =
-			descriptor->u.hs.DeviceRemovable[i];
-
-	for (i = 0; i < ((hub->desc.bNbrPorts + 1 + 7)/8); i++)
-		hub->desc.u.hs.PortPowerCtrlMask[i] =
-			descriptor->u.hs.PortPowerCtrlMask[i];
-
-	dev->maxchild = descriptor->bNbrPorts;
-	debug("%d ports detected\n", dev->maxchild);
 
 	hubCharacteristics = get_unaligned(&hub->desc.wHubCharacteristics);
 	switch (hubCharacteristics & HUB_CHAR_LPSM) {
@@ -755,9 +774,9 @@ static int usb_hub_configure(struct usb_device *dev)
 		break;
 	}
 
-	debug("power on to power good time: %dms\n",
+	printf("power on to power good time: %dms\n",
 	      descriptor->bPwrOn2PwrGood * 2);
-	debug("hub controller current requirement: %dmA\n",
+	printf("hub controller current requirement: %dmA\n",
 	      descriptor->bHubContrCurrent);
 
 	for (i = 0; i < dev->maxchild; i++)
@@ -766,14 +785,14 @@ static int usb_hub_configure(struct usb_device *dev)
 		      (1 << ((i + 1) % 8)) ? " not" : "");
 
 	if (sizeof(struct usb_hub_status) > USB_BUFSIZ) {
-		debug("usb_hub_configure: failed to get Status - " \
+		printf("usb_hub_configure: failed to get Status - " \
 		      "too long: %d\n", descriptor->bLength);
 		return -EFBIG;
 	}
 
 	ret = usb_get_hub_status(dev, buffer);
 	if (ret < 0) {
-		debug("usb_hub_configure: failed to get Status %lX\n",
+		printf("usb_hub_configure: failed to get Status %lX\n",
 		      dev->status);
 		return ret;
 	}
@@ -797,7 +816,7 @@ static int usb_hub_configure(struct usb_device *dev)
 	 */
 	ret = usb_update_hub_device(dev);
 	if (ret < 0 && ret != -ENOSYS) {
-		debug("%s: failed to update hub device for HCD (%x)\n",
+		printf("%s: failed to update hub device for HCD (%x)\n",
 		      __func__, ret);
 		return ret;
 	}
