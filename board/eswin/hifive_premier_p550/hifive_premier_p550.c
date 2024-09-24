@@ -35,8 +35,9 @@
 #include <spi.h>
 #include <spi_flash.h>
 #include <init.h>
-#include <dm/device-internal.h>
 #include <asm/gpio.h>
+#include <dm/device-internal.h>
+#include <dm/pinctrl.h>
 #ifdef CONFIG_ESWIN_UMBOX
 #include <eswin/eswin-umbox-srvc.h>
 #endif
@@ -221,7 +222,7 @@ int set_voltage_default(void)
 	ofnode node;
 	struct udevice *pinctrl;
 	struct gpio_desc desc;
-	int ret = 0;
+
 	node = ofnode_path("/config");
 	if (!ofnode_valid(node)) {
 		pr_err("Can't find /config node!\n");
