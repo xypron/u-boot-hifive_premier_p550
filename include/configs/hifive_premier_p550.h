@@ -11,12 +11,6 @@
 #include <linux/sizes.h>
 
 #define CFG_MALLOC_F_ADDR   0xf0000000
-// #define CONFIG_BOOT_SATA
-
-/* Environment options */
-#define BOOT_TARGET_DEVICES(func) \
-    func(MMC, mmc, 0) \
-    func(DHCP, dhcp, na)
 
 #include <config_distro_bootcmd.h>
 
@@ -45,7 +39,8 @@
     "uuid_root=b0f77ad6-36cd-4a99-a8c0-31d73649aa08\0" \
     "uuid_swap=5ebcaaf0-e098-43b9-beef-1f8deedd135e\0" \
     "partitions=name=boot,start=1MiB,size=512MiB,type=${typeid_efi},uuid=${uuid_boot};name=swap,size=4096MiB,type=${typeid_swap},uuid=${uuid_swap};name=root,size=30GiB,type=${typeid_filesystem},uuid=${uuid_root};name=userdata,type=${typeid_filesystem},size=-;\0" \
-    "gpt_partition=gpt write mmc ${emmc_dev} $partitions\0"
+    "gpt_partition=gpt write mmc ${emmc_dev} $partitions\0" \
+    "boot_targets=mmc1 usb sata mmc0\0"
 
 #undef CONFIG_BOOTCOMMAND
 #define CONFIG_BOOTCOMMAND \
