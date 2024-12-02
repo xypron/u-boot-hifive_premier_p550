@@ -106,7 +106,6 @@ int hardware_info_env_set(void)
 {
 	uint8_t mac_addr[6];
 	const char *node_name_d0 = "spi@51800000";
-	const char *node_name_d1 = "spi@71800000";
 	HardwareBoardInfo_t gHardware_Board_Info;
 	uint64_t size = sizeof(HardwareBoardInfo_t);
 	memset((uint8_t *)&gHardware_Board_Info, 0, size);
@@ -121,7 +120,14 @@ int hardware_info_env_set(void)
 	if (!eth_env_get_enetaddr("eth1addr", mac_addr) && is_valid_ethaddr(gHardware_Board_Info.ethernetMAC2)) {
 		eth_env_set_enetaddr("eth1addr", gHardware_Board_Info.ethernetMAC2);
 	}
-
+	memset(mac_addr, 0, 6);
+	if (!eth_env_get_enetaddr("eth2addr", mac_addr) && is_valid_ethaddr(gHardware_Board_Info.D1_ethernetMAC1)) {
+		eth_env_set_enetaddr("eth2addr", gHardware_Board_Info.D1_ethernetMAC1);
+	}
+	memset(mac_addr, 0, 6);
+	if (!eth_env_get_enetaddr("eth3addr", mac_addr) && is_valid_ethaddr(gHardware_Board_Info.D1_ethernetMAC2)) {
+		eth_env_set_enetaddr("eth3addr", gHardware_Board_Info.D1_ethernetMAC2);
+	}
 	char *boardSerialNumber = gHardware_Board_Info.boardSerialNumber;
 	printf("boardSerialNumber %s\n",boardSerialNumber);
 	if(strstr(boardSerialNumber, "EIDS100AX16")) {
@@ -132,19 +138,6 @@ int hardware_info_env_set(void)
 	}
 	else if(strstr(boardSerialNumber, "EIDS200B516")) {
 		env_set("fdtfile","eswin/eic7700-evb-a2.dtb");
-	}
-
-	memset((uint8_t *)&gHardware_Board_Info, 0, size);
-	if(get_hardware_board_info(node_name_d1, &gHardware_Board_Info)) {
-		return 0;
-	}
-	memset(mac_addr, 0, 6);
-	if (!eth_env_get_enetaddr("eth2addr", mac_addr) && is_valid_ethaddr(gHardware_Board_Info.ethernetMAC1)) {
-		eth_env_set_enetaddr("eth2addr", gHardware_Board_Info.ethernetMAC1);
-	}
-	memset(mac_addr, 0, 6);
-	if (!eth_env_get_enetaddr("eth3addr", mac_addr) && is_valid_ethaddr(gHardware_Board_Info.ethernetMAC2)) {
-		eth_env_set_enetaddr("eth3addr", gHardware_Board_Info.ethernetMAC2);
 	}
 	return 0;
 }
@@ -168,7 +161,7 @@ int misc_init_r(void)
 	hardware_info_env_set();
 
 	if (NULL == env_get("fdtfile")) {
-		env_set("fdtfile","eswin/eic7700-evb-a2.dtb");
+		env_set("fdtfile","eswin/eic7702-evb-a1.dtb");
 	}
 	env_set_ulong("ram_size", (gd->ram_size / 1024 / 1024 / 1024));
 	eswin_update_bootargs();
@@ -195,6 +188,7 @@ void irq_mux_route(void)
 
 	val = 0;
 	writel(val,(void *)(0x51810000+0x3c0));
+	writel(val,(void *)(0x71810000+0x3c0));
 }
 
 int board_init(void)

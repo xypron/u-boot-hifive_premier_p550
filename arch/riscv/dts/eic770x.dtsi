@@ -23,7 +23,7 @@
 #define RTCCLK_FREQ             1000000
 
 /dts-v1/;
-#include "eic7700-pinctrl.dtsi"
+#include "eic770x-pinctrl.dtsi"
 #define USB_CLASS_HUB	 9
 / {
 	#address-cells = <2>;
@@ -506,10 +506,26 @@
 					<&cru EIC7X_CLK_VO_PIXEL_CLK>,
 					<&cru EIC7X_CLK_HSP_MSHC1_CORE_CLK>;
 		};
+		d1_cru: clock-controller@71828000 {
+			compatible = "eswin,eic770x-cru";
+			reg = <0x0 0x71828000 0x0 0x1000>;
+			#clock-cells = <1>;
+			#reset-cells = <1>;
+			clocks = <&d1_cru EIC7X_CLK_LSP_I2C0_PCLK>,
+					<&d1_cru EIC7X_CLK_VO_PIXEL_CLK>,
+					<&d1_cru EIC7X_CLK_HSP_MSHC1_CORE_CLK>;
+			status = "disabled";
+		};
 		rst: reset-controller@51828000 {
 			compatible = "eswin,eic770x-reset";
 			reg = <0x0 0x51828000 0x0 0x1000>;
 			#reset-cells = <2>;
+		};
+		d1_rst: reset-controller@71828000 {
+			compatible = "eswin,eic770x-reset";
+			reg = <0x0 0x71828000 0x0 0x1000>;
+			#reset-cells = <2>;
+			status = "disabled";
 		};
 		pcie: pcie@54000000 {
 			status = "disabled";
@@ -571,14 +587,93 @@
 		};
 		sdhci_emmc: sdhci@50450000 {
 			compatible = "eswin,emmc-sdhci-5.1";
+			clocks = <&cru EIC7X_CLK_HSP_MSHC0_CORE_CLK>,
+					<&cru EIC7X_CLK_HSP_CFG_CLK>,
+					<&cru EIC7X_CLK_HSP_ACLK>;
+			clock-names = "clk_xin", "clk_ahb", "aclk";
+			clock-output-names = "emmc_cardclock";
+			#clock-cells = <0>;
+			resets = <&rst HSPDMA_RST_CTRL SW_MSHC0_TXRX_RSTN>,
+				<&rst HSPDMA_RST_CTRL SW_MSHC0_PHY_RSTN>,
+				<&rst HSPDMA_RST_CTRL SW_HSP_EMMC_PRSTN>,
+				<&rst HSPDMA_RST_CTRL SW_HSP_EMMC_ARSTN>;
+			reset-names = "txrx_rst", "phy_rst", "prstn", "arstn";
 			reg = <0x0 0x50450000 0x0 0x10000>;
 			max-frequency = <200000000>;
-			emmc_phy_reg_base = <0x50450000>;
-			/*sdhci-caps-mask = <0x4 0x200000>;*/
 			disable-cqe-dcmd;
 			bus-width = <8>;
 			non-removeable;
 			index = <0>;
+			numa-node-id = <0>;
+			status = "disabled";
+		};
+		sd: sd@50460000 {
+			compatible = "eswin,sd-sdhci";
+			clocks =<&cru EIC7X_CLK_HSP_MSHC1_CORE_CLK>,
+				<&cru EIC7X_CLK_HSP_CFG_CLK>,
+				<&cru EIC7X_SPLL2_FOUT3>,
+				<&cru EIC7X_MUX_U_MSHCORE_ROOT_3MUX1_1>,
+				<&cru EIC7X_CLK_HSP_ACLK>;
+			clock-names ="clk_xin","clk_ahb","clk_spll2_fout3","clk_mux1_1", "aclk";
+			clock-output-names = "sdio0_cardclock";
+			#clock-cells = <0>;
+			resets = <&rst HSPDMA_RST_CTRL SW_MSHC1_TXRX_RSTN>,
+				<&rst HSPDMA_RST_CTRL SW_MSHC1_PHY_RSTN>,
+				<&rst HSPDMA_RST_CTRL SW_HSP_SD0_PRSTN>,
+				<&rst HSPDMA_RST_CTRL SW_HSP_SD0_ARSTN>;
+			reset-names = "txrx_rst","phy_rst","prstn","arstn";
+			reg = <0x0 0x50460000 0x0 0x10000>;
+			max-frequency = <208000000>;
+			bus-width = <4>;
+			index = <1>;
+			numa-node-id = <0>;
+			status = "disabled";
+		};
+
+		d1_sdhci_emmc: sdhci@70450000 {
+			compatible = "eswin,emmc-sdhci-5.1";
+			clocks = <&d1_cru EIC7X_CLK_HSP_MSHC0_CORE_CLK>,
+					<&d1_cru EIC7X_CLK_HSP_CFG_CLK>,
+					<&d1_cru EIC7X_CLK_HSP_ACLK>;
+			clock-names = "clk_xin", "clk_ahb", "aclk";
+			clock-output-names = "emmc_cardclock";
+			#clock-cells = <0>;
+			resets = <&d1_rst HSPDMA_RST_CTRL SW_MSHC0_TXRX_RSTN>,
+				<&d1_rst HSPDMA_RST_CTRL SW_MSHC0_PHY_RSTN>,
+				<&d1_rst HSPDMA_RST_CTRL SW_HSP_EMMC_PRSTN>,
+				<&d1_rst HSPDMA_RST_CTRL SW_HSP_EMMC_ARSTN>;
+			reset-names = "txrx_rst", "phy_rst", "prstn", "arstn";
+
+			reg = <0x0 0x70450000 0x0 0x10000>;
+			max-frequency = <200000000>;
+			disable-cqe-dcmd;
+			bus-width = <8>;
+			non-removeable;
+			index = <0>;
+			numa-node-id = <1>;
+			status = "disabled";
+		};
+		d1_sd: sd@70460000 {
+			compatible = "eswin,sd-sdhci";
+			clocks =<&d1_cru EIC7X_CLK_HSP_MSHC1_CORE_CLK>,
+				<&d1_cru EIC7X_CLK_HSP_CFG_CLK>,
+				<&d1_cru EIC7X_SPLL2_FOUT3>,
+				<&d1_cru EIC7X_MUX_U_MSHCORE_ROOT_3MUX1_1>,
+				<&d1_cru EIC7X_CLK_HSP_ACLK>;
+			clock-names ="clk_xin","clk_ahb","clk_spll2_fout3","clk_mux1_1", "aclk";
+			clock-output-names = "sdio0_cardclock";
+			#clock-cells = <0>;
+			resets = <&d1_rst HSPDMA_RST_CTRL SW_MSHC1_TXRX_RSTN>,
+				<&d1_rst HSPDMA_RST_CTRL SW_MSHC1_PHY_RSTN>,
+				<&d1_rst HSPDMA_RST_CTRL SW_HSP_SD0_PRSTN>,
+				<&d1_rst HSPDMA_RST_CTRL SW_HSP_SD0_ARSTN>;
+			reset-names = "txrx_rst","phy_rst","prstn","arstn";
+
+			reg = <0x0 0x70460000 0x0 0x10000>;
+			max-frequency = <208000000>;
+			bus-width = <4>;
+			index = <1>;
+			numa-node-id = <1>;
 			status = "disabled";
 		};
 
@@ -656,7 +751,7 @@
 			reg = <0x0 0x51800000 0x0 0x8000>;
 			es,sysscr_reg = <0x51828000>;
 			write-status-reg-time = <1>;    // time in ms
-			page-program-time = <1>;
+			page-program-time = <2>;
 			sector-erase-time = <45>;
 			small-block-erase-time = <120>;
 			large-block-erase-time = <150>;
@@ -667,34 +762,24 @@
 			spi-max-frequency = <4800000>;
 			num-cs = <1>;
 			reg-io-width = <4>;
-
 		};
-		bootspi_d1: spi@71800000 {
+		d1_bootspi: spi@71800000 {
 			status = "disabled";
 			compatible = "eswin,es-apb-spi-1.0";
 			reg = <0x0 0x71800000 0x0 0x8000>;
 			es,sysscr_reg = <0x71828000>;
 			write-status-reg-time = <1>;    // time in ms
-			page-program-time = <1>;
+			page-program-time = <2>;
 			sector-erase-time = <45>;
 			small-block-erase-time = <120>;
 			large-block-erase-time = <150>;
 			chip-erase-time = <40>;
 			#address-cells = <1>;
 			#size-cells = <0>;
-			clocks = <&cru EIC7X_CLK_CLK_BOOTSPI>;
+			clocks = <&d1_cru EIC7X_CLK_CLK_BOOTSPI>;
 			spi-max-frequency = <4800000>;
 			num-cs = <1>;
 			reg-io-width = <4>;
-
-		};
-		sd: sd@50460000 {
-			compatible = "eswin,sd-sdhci";
-			reg = <0x0 0x50460000 0x0 0x10000>;
-			max-frequency = <208000000>;
-			bus-width = <4>;
-			index = <1>;
-			status = "disabled";
 		};
 
 		mipi_dsi: dsi@50270000 {
@@ -871,7 +956,7 @@
 			#size-cells = <0>;
 			compatible = "eswin,gpio-bank";
 			reg = <0x0 0x51600000 0x0 0x80>;
-			status = "okay";
+			status = "disabled";
 
 			porta: gpio-port@0 {
 				compatible = "eswin,gpio-bank";
@@ -906,6 +991,45 @@
 			};
 		};
 
+		d1_gpio: gpio@71600000 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			compatible = "eswin,gpio-bank";
+			reg = <0x0 0x71600000 0x0 0x80>;
+			status = "disabled";
+
+			d_1porta: gpio-port@0 {
+				compatible = "eswin,gpio-bank";
+				gpio-controller;
+				#gpio-cells = <2>;
+				ngpios = <32>;
+				reg = <0>;
+			};
+
+			d1_portb: gpio-port@1 {
+				compatible = "eswin,gpio-bank";
+				gpio-controller;
+				#gpio-cells = <2>;
+				ngpios = <32>;
+				reg = <1>;
+			};
+
+			d1_portc: gpio-port@2 {
+				compatible = "eswin,gpio-bank";
+				gpio-controller;
+				#gpio-cells = <2>;
+				ngpios = <32>;
+				reg = <2>;
+			};
+
+			d1_portd: gpio-port@3 {
+				compatible = "eswin,gpio-bank";
+				gpio-controller;
+				#gpio-cells = <2>;
+				ngpios = <16>;
+				reg = <3>;
+			};
+		};
 	};
 
 	pmu {
